@@ -1,0 +1,28 @@
+name: Ziehung holen
+
+on:
+  schedule:
+    # Zeiten in UTC: Di + Fr abends zweimal, Mi + Sa früh als Nachzügler
+    - cron: "30 21 * * 2,5"
+    - cron: "30 23 * * 2,5"
+    - cron: "0 6 * * 3,6"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  holen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gewinnzahlen lesen
+        run: python3 scripts/ziehung_holen.py
+      - name: Änderung speichern
+        run: |
+          if git diff --quiet; then echo "Keine neue Ziehung."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ziehungen.json
+          git commit -m "Ziehung aktualisiert"
+          git push
