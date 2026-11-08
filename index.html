@@ -270,21 +270,21 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
   }
 
   // ---------- Countdown ----------
-  const SCHLUSS_H=19; // Annahmeschluss laut eurojackpot.de
+  const SCHLUSS_H=20; // Ziehung freitags ca. 20 Uhr in Helsinki
   const isDrawDay=d=>{const w=d.getDay();return w===5||(!onlyFri&&w===2)};
   const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const zwei=n=>String(n).padStart(2,'0');
   function tagMitSchluss(basis,offset){const d=new Date(basis);d.setDate(basis.getDate()+offset);d.setHours(SCHLUSS_H,0,0,0);return d}
-  function naechsterSchluss(now){for(let i=0;i<8;i++){const d=tagMitSchluss(now,i);if(isDrawDay(d)&&d>now)return d}return null}
+  function naechsterSchluss(now){for(let i=0;i<8;i++){const d=tagMitSchluss(now,i);if(d.getDay()===5&&d>now)return d}return null}
   function letzteZiehung(now){for(let i=0;i<8;i++){const d=tagMitSchluss(now,-i);if(isDrawDay(d)&&d<=now)return d}return null}
   function renderCountdown(){
     const box=$('countdown'), now=new Date(), next=naechsterSchluss(now);
     box.replaceChildren();
     if(!next) return;
     const diff=next-now, t=Math.floor(diff/86400000), h=Math.floor(diff/3600000)%24, m=Math.floor(diff/60000)%60, s=Math.floor(diff/1000)%60;
-    box.append(el('p','cd-label','Noch bis zum Annahmeschluss'));
+    box.append(el('p','cd-label','Noch bis zur nächsten Ziehung'));
     box.append(el('p','cd-time',t>=1?`${t} T ${zwei(h)} Std ${zwei(m)} Min`:`${zwei(h)}:${zwei(m)}:${zwei(s)}`));
-    box.append(el('p','cd-date',next.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})+', 19:00 Uhr'));
+    box.append(el('p','cd-date',next.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})+', 20:00 Uhr'));
     const last=letzteZiehung(now);
     if(geladen&&last&&(now-last)<40*3600000&&!draws.some(x=>x.date===iso(last))){
       const heute=iso(last)===iso(now);
