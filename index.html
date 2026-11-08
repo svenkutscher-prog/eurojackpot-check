@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Eurojackpot">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Eurojackpot-Check</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎱</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFFBEA; --slip:#FFF3C4; --print:#C4152B; --print-soft:#EDB9B6; --ink:#221C14; --muted:#6E6250;
+  --hit:#F2B705; --hit-ink:#221C14; --euro:#1E4C9A; --euro-soft:#B9C9E8; --euro-fill:#1E4C9A;
+  --line:#E6D49A; --win:#17713A; --win-bg:#DDF2E2; --shade:rgba(34,28,20,.45);
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1C1810; --slip:#29231A; --print:#FF7A7A; --print-soft:#5E3330; --ink:#F6EDD6; --muted:#B4A78B;
+    --hit:#F2B705; --hit-ink:#1C1810; --euro:#9DBAF2; --euro-soft:#34466B; --euro-fill:#2E62C4;
+    --line:#463C28; --win:#6ED896; --win-bg:#173322; --shade:rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1C1810; --slip:#29231A; --print:#FF7A7A; --print-soft:#5E3330; --ink:#F6EDD6; --muted:#B4A78B;
+  --hit:#F2B705; --hit-ink:#1C1810; --euro:#9DBAF2; --euro-soft:#34466B; --euro-fill:#2E62C4;
+  --line:#463C28; --win:#6ED896; --win-bg:#173322; --shade:rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.45 Barlow,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:560px;margin:0 auto;padding:18px 16px 56px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--hit);outline-offset:2px}
+.num{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;font-weight:700}
+
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+h1{margin:0;font:700 30px/1.05 "Barlow Condensed","Arial Narrow",Arial,sans-serif;color:var(--print)}
+.sync{font-size:13px;color:var(--muted)}
+
+/* Ziehung */
+.draw{background:var(--slip);border:2px solid var(--print);border-radius:14px;padding:16px 16px 14px}
+.draw-date{font-weight:600;margin:0 0 12px}
+.balls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ball{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:22px;background:var(--hit);color:var(--hit-ink)}
+.ball.e{background:var(--euro-fill);color:#fff}
+.sep{width:2px;height:30px;background:var(--print-soft);margin:0 4px}
+.draw-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.btn{border:2px solid var(--print);background:transparent;color:var(--print);border-radius:999px;padding:8px 16px;font-weight:600}
+.btn.solid{background:var(--print);color:var(--paper)}
+.btn:disabled{opacity:.4;cursor:default}
+.empty{color:var(--muted);margin:0}
+
+/* Ergebnis */
+.verdict{margin:22px 2px 6px}
+.verdict h2{margin:0;font:700 34px/1.05 "Barlow Condensed","Arial Narrow",Arial,sans-serif}
+.verdict.win h2{color:var(--win)}
+.verdict p{margin:6px 0 0;color:var(--muted)}
+.verdict.win p{color:var(--ink)}
+
+/* Tipps */
+.tips{margin-top:18px;border-top:2px solid var(--line)}
+.tip{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:2px solid var(--line);padding:14px 2px}
+.tip-label{font:700 15px "Barlow Condensed","Arial Narrow",Arial,sans-serif;color:var(--print);writing-mode:vertical-rl;transform:rotate(180deg)}
+.cells{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.cell{min-width:34px;height:34px;padding:0 4px;display:grid;place-items:center;border:1.5px solid var(--print-soft);color:var(--print);border-radius:7px;font-size:19px}
+.cell.e{border-color:var(--euro-soft);color:var(--euro)}
+.cell.hit{background:var(--hit);border-color:var(--hit);color:var(--hit-ink)}
+.cell.e.hit{background:var(--euro-fill);border-color:var(--euro-fill);color:#fff}
+.cells .sep{height:22px;margin:0 3px}
+.score{text-align:right;min-width:62px}
+.score b{display:block;font:700 22px/1 "Barlow Condensed","Arial Narrow",Arial,sans-serif}
+.score small{color:var(--muted);font-size:13px}
+.score.win b,.score.win small{color:var(--win)}
+.tip-empty{color:var(--muted)}
+
+/* Verlauf */
+h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:34px 0 8px;color:var(--print)}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.hist button.sel{flex:1;display:flex;justify-content:space-between;gap:10px;align-items:center;background:none;border:0;padding:11px 2px;text-align:left}
+.hist button.sel[aria-current="true"]{font-weight:600}
+.hist .nums{color:var(--muted);font-size:15px}
+.chip{font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--slip);color:var(--muted);white-space:nowrap}
+.chip.win{background:var(--win-bg);color:var(--win)}
+.del{background:none;border:0;color:var(--muted);font-size:20px;padding:8px;line-height:1}
+.setting{display:flex;align-items:center;gap:10px;margin-top:22px;color:var(--muted)}
+.setting input{width:22px;height:22px;accent-color:var(--print)}
+.foot{margin-top:28px;font-size:13px;color:var(--muted)}
+
+/* Bottom-Sheet */
+.overlay{position:fixed;inset:0;background:var(--shade);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.overlay.open{display:flex}
+.sheet{background:var(--paper);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.sheet h4{margin:0 0 4px;font:700 26px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;color:var(--print)}
+.sheet .hint{margin:0 0 12px;color:var(--muted);font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.grid.e{grid-template-columns:repeat(6,1fr)}
+.pick{aspect-ratio:1;border:1.5px solid var(--print-soft);background:var(--slip);color:var(--print);border-radius:8px;font:700 19px "Barlow Condensed","Arial Narrow",Arial,sans-serif;padding:0}
+.grid.e .pick{border-color:var(--euro-soft);color:var(--euro)}
+.pick[aria-pressed="true"]{background:var(--print);border-color:var(--print);color:var(--paper)}
+.grid.e .pick[aria-pressed="true"]{background:var(--euro-fill);border-color:var(--euro-fill);color:#fff}
+.sublabel{display:flex;justify-content:space-between;margin:16px 0 8px;font-weight:600}
+.sublabel span{color:var(--muted);font-weight:400}
+.date{width:100%;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--slip);color:var(--ink)}
+.sheet-actions{display:flex;gap:10px;justify-content:space-between;margin-top:18px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+
+/* Countdown */
+.countdown{margin:0 0 14px;padding:14px 16px;border-radius:14px;border:2px dashed var(--print-soft)}
+.cd-label{margin:0;font-size:14px;color:var(--muted)}
+.cd-time{margin:2px 0 0;font:700 34px/1.05 "Barlow Condensed","Arial Narrow",Arial,sans-serif;color:var(--print);font-variant-numeric:tabular-nums}
+.cd-date{margin:4px 0 0;font-size:15px}
+.cd-pending{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Eurojackpot-Check</h1>
+    <button class="btn" id="reload" type="button">Aktualisieren</button>
+  </header>
+
+  <section class="countdown" id="countdown"></section>
+  <section class="draw" id="draw" aria-live="polite"></section>
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+  <section class="tips" id="tips" aria-label="Deine Tipps"></section>
+
+  <h3>Letzte Ziehungen</h3>
+  <ul class="hist" id="hist"></ul>
+
+  <label class="setting"><input type="checkbox" id="onlyFri"> Nur Freitagsziehungen anzeigen</label>
+  <p class="foot" id="stand"></p>
+  <p class="foot">Tipps ändern: Datei tipps.json im GitHub-Repository bearbeiten. Angaben ohne Gewähr – maßgeblich ist die offizielle Gewinnauskunft auf eurojackpot.de. Teilnahme ab 18 Jahren.</p>
+</main>
+
+<script>
+(function(){
+  // Gewinnklassen 1–12: [Richtige, Eurozahlen]
+  const CLASSES=[[5,2],[5,1],[5,0],[4,2],[4,1],[3,2],[4,0],[2,2],[3,1],[3,0],[1,2],[2,1]];
+  const $=id=>document.getElementById(id);
+
+  let tips=[], draws=[], selected=null, onlyFri=false, fehler='', geladen=false;
+  try{onlyFri=localStorage.getItem('ej-onlyFri')==='1'}catch(e){}
+
+  const klasse=(n,e)=>{const i=CLASSES.findIndex(([a,b])=>a===n&&b===e);return i<0?null:i+1};
+  const complete=t=>t&&t.n.length===5&&t.e.length===2;
+  const check=(t,d)=>{const n=t.n.filter(x=>d.n.includes(x)).length;const e=t.e.filter(x=>d.e.includes(x)).length;return{n,e,k:klasse(n,e)}};
+  const fmtDate=s=>new Date(s+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const fmtShort=s=>new Date(s+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+  const isFri=s=>new Date(s+'T12:00:00').getDay()===5;
+  const sortNum=a=>[...a].sort((x,y)=>x-y);
+  const scoreText=(n,e)=>`${n} Richtige + ${e} Eurozahl${e===1?'':'en'}`;
+
+  function cleanTip(t){
+    const ok=(a,max)=>Array.isArray(a)?a.map(Number).filter(x=>Number.isInteger(x)&&x>=1&&x<=max):[];
+    return{n:sortNum(ok(t&&t.n,50)).slice(0,5),e:sortNum(ok(t&&t.e,12)).slice(0,2)};
+  }
+  function visibleDraws(){return [...draws].sort((a,b)=>b.date.localeCompare(a.date)).filter(d=>!onlyFri||isFri(d.date))}
+  function currentDraw(){const v=visibleDraws();return v.find(d=>d.date===selected)||v[0]||null}
+
+  async function laden(datei){
+    const r=await fetch(datei+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error(datei+' ('+r.status+')');
+    return r.json();
+  }
+  async function alles(){
+    fehler='';
+    const [t,d]=await Promise.allSettled([laden('tipps.json'),laden('ziehungen.json')]);
+    let cache=null; try{cache=JSON.parse(localStorage.getItem('ej-cache')||'null')}catch(e){}
+    if(t.status==='fulfilled'&&Array.isArray(t.value.tips)) tips=t.value.tips.slice(0,4).map(cleanTip);
+    else if(cache&&cache.tips) tips=cache.tips.map(cleanTip);
+    else fehler='tipps.json konnte nicht gelesen werden.';
+    if(d.status==='fulfilled'&&Array.isArray(d.value.draws)){
+      draws=d.value.draws.filter(x=>x&&typeof x.date==='string'&&Array.isArray(x.n)&&Array.isArray(x.e))
+        .map(x=>({date:x.date,n:sortNum(x.n.map(Number)),e:sortNum(x.e.map(Number))}));
+    } else {
+      fehler=(fehler?fehler+' ':'')+'ziehungen.json konnte nicht gelesen werden'+(d.reason?' ('+d.reason.message+')':'')+'.';
+      if(cache&&Array.isArray(cache.draws)&&!draws.length){draws=cache.draws;fehler+=' Angezeigt wird der letzte bekannte Stand.'}
+    }
+    try{localStorage.setItem('ej-cache',JSON.stringify({tips,draws}))}catch(e){}
+    geladen=true;
+    $('stand').textContent='Stand: '+new Date().toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
+    render();
+  }
+
+  function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+
+  function renderDraw(d){
+    const box=$('draw'); box.replaceChildren();
+    if(fehler) box.append(el('p','empty',fehler));
+    if(!d){ if(!fehler) box.append(el('p','empty','Noch keine Ziehung vorhanden.')); return }
+    box.append(el('p','draw-date',fmtDate(d.date)));
+    const b=el('div','balls');
+    d.n.forEach(x=>b.append(el('span','ball num',x)));
+    b.append(el('span','sep'));
+    d.e.forEach(x=>b.append(el('span','ball e num',x)));
+    box.append(b);
+  }
+
+  function renderVerdict(d){
+    const v=$('verdict'); v.className='verdict'; v.replaceChildren();
+    const full=tips.map((t,i)=>({t,i})).filter(x=>complete(x.t));
+    if(!full.length){v.append(el('h2',null,'Keine Tipps')); v.append(el('p',null,'Trag deine Zahlen in tipps.json ein.'));return}
+    if(!d){v.append(el('h2',null,'Warte auf Ziehung'));return}
+    const res=full.map(x=>({...x,r:check(x.t,d)}));
+    const wins=res.filter(x=>x.r.k);
+    if(wins.length){
+      v.classList.add('win');
+      v.append(el('h2',null,'Gewinn!'));
+      wins.forEach(w=>v.append(el('p',null,`Tipp ${w.i+1}: ${scoreText(w.r.n,w.r.e)} – Gewinnklasse ${w.r.k}`)));
+    }else{
+      const best=res.reduce((a,b)=>(b.r.n*3+b.r.e)>(a.r.n*3+a.r.e)?b:a);
+      v.append(el('h2',null,'Kein Gewinn'));
+      v.append(el('p',null,`Bester Tipp: ${scoreText(best.r.n,best.r.e)}.`));
+    }
+  }
+
+  function renderTips(d){
+    const box=$('tips'); box.replaceChildren();
+    tips.forEach((t,i)=>{
+      if(!t.n.length&&!t.e.length) return;
+      const row=el('div','tip');
+      row.append(el('span','tip-label',`Tipp ${i+1}`));
+      const cells=el('div','cells');
+      t.n.forEach(x=>cells.append(el('span','cell num'+(d&&d.n.includes(x)?' hit':''),x)));
+      cells.append(el('span','sep'));
+      t.e.forEach(x=>cells.append(el('span','cell e num'+(d&&d.e.includes(x)?' hit':''),x)));
+      row.append(cells);
+      const sc=el('div','score');
+      if(!complete(t)) sc.append(el('small',null,'unvollständig'));
+      else if(d){
+        const r=check(t,d); if(r.k) sc.classList.add('win');
+        sc.append(el('b',null,`${r.n} + ${r.e}`));
+        sc.append(el('small',null,r.k?`Klasse ${r.k}`:'kein Gewinn'));
+      }
+      row.append(sc); box.append(row);
+    });
+  }
+
+  function renderHist(cur){
+    const ul=$('hist'); ul.replaceChildren();
+    const v=visibleDraws();
+    if(!v.length){ul.append(el('li','empty','Noch keine Einträge.'));return}
+    const full=tips.map((t,i)=>({t,i})).filter(x=>complete(x.t));
+    v.slice(0,20).forEach(d=>{
+      const li=el('li');
+      const b=el('button','sel'); b.type='button';
+      if(cur&&cur.date===d.date) b.setAttribute('aria-current','true');
+      const left=el('span');
+      left.append(el('span',null,fmtShort(d.date)),document.createElement('br'),el('span','nums num',`${d.n.join(' ')}  |  ${d.e.join(' ')}`));
+      let best=null;
+      full.forEach(x=>{const r=check(x.t,d);if(r.k&&(!best||r.k<best))best=r.k});
+      b.append(left,el('span','chip'+(best?' win':''),best?`Klasse ${best}`:(full.length?'kein Gewinn':'–')));
+      b.onclick=()=>{selected=d.date;render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})};
+      li.append(b); ul.append(li);
+    });
+  }
+
+  // ---------- Countdown ----------
+  const SCHLUSS_H=19; // Annahmeschluss laut eurojackpot.de
+  const isDrawDay=d=>{const w=d.getDay();return w===5||(!onlyFri&&w===2)};
+  const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const zwei=n=>String(n).padStart(2,'0');
+  function tagMitSchluss(basis,offset){const d=new Date(basis);d.setDate(basis.getDate()+offset);d.setHours(SCHLUSS_H,0,0,0);return d}
+  function naechsterSchluss(now){for(let i=0;i<8;i++){const d=tagMitSchluss(now,i);if(isDrawDay(d)&&d>now)return d}return null}
+  function letzteZiehung(now){for(let i=0;i<8;i++){const d=tagMitSchluss(now,-i);if(isDrawDay(d)&&d<=now)return d}return null}
+  function renderCountdown(){
+    const box=$('countdown'), now=new Date(), next=naechsterSchluss(now);
+    box.replaceChildren();
+    if(!next) return;
+    const diff=next-now, t=Math.floor(diff/86400000), h=Math.floor(diff/3600000)%24, m=Math.floor(diff/60000)%60, s=Math.floor(diff/1000)%60;
+    box.append(el('p','cd-label','Noch bis zum Annahmeschluss'));
+    box.append(el('p','cd-time',t>=1?`${t} T ${zwei(h)} Std ${zwei(m)} Min`:`${zwei(h)}:${zwei(m)}:${zwei(s)}`));
+    box.append(el('p','cd-date',next.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})+', 19:00 Uhr'));
+    const last=letzteZiehung(now);
+    if(geladen&&last&&(now-last)<40*3600000&&!draws.some(x=>x.date===iso(last))){
+      const heute=iso(last)===iso(now);
+      box.append(el('p','cd-pending',heute?'Die Ziehung läuft heute Abend – die Zahlen kommen in Kürze.':`Die Zahlen der Ziehung vom ${fmtShort(iso(last))} kommen in Kürze.`));
+    }
+  }
+  function cdSicher(){try{renderCountdown()}catch(e){$('countdown').hidden=true}}
+  setInterval(cdSicher,1000);
+
+  function render(){const d=currentDraw();renderDraw(d);renderVerdict(d);renderTips(d);renderHist(d);$('onlyFri').checked=onlyFri;cdSicher()}
+
+  $('onlyFri').onchange=e=>{onlyFri=e.target.checked;selected=null;try{localStorage.setItem('ej-onlyFri',onlyFri?'1':'0')}catch(x){}render()};
+  $('reload').onclick=()=>{selected=null;alles()};
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)alles()});
+  alles();
+})();
+</script>
+</body>
+</html>
