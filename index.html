@@ -166,7 +166,7 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
 <div class="overlay" id="scSheet" role="dialog" aria-modal="true" aria-labelledby="scTitel">
   <div class="sheet">
     <h4 id="scTitel">Schein ändern</h4>
-    <p class="hint">Datum direkt wählen oder um +1 bis +4 Wochen verlängern. „Bis“ ist immer ein Freitag.</p>
+    <p class="hint">Datum direkt wählen oder um +1 bis +4 Wochen verlängern. Gespeichert wird genau das Datum, das du wählst.</p>
     <div class="sc-felder">
       <label for="scVon">von</label><input type="date" class="date" id="scVon">
       <label for="scBis">bis</label><input type="date" class="date" id="scBis">
@@ -349,7 +349,7 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
   function plusWochen(s,w){const d=tag(s);d.setDate(d.getDate()+w*7);return isoTag(d)}
   function cleanSchein(s){
     if(!s) return null;
-    if(isoOk(s.von)&&isoOk(s.bis)) return{von:s.von,bis:aufFreitag(s.bis)};
+    if(isoOk(s.bis)) return{von:isoOk(s.von)?s.von:'',bis:s.bis};   // Datum so, wie eingegeben
     const w=parseInt(s.wochen,10);                      // altes Format: Abgabedatum + Wochen
     if(isoOk(s.abgabe)&&w>=1) return{von:s.abgabe,bis:plusWochen(aufFreitag(s.abgabe),w)};
     return null;
@@ -358,15 +358,17 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
     const box=$('schein'); box.replaceChildren(); box.hidden=false;
     const zeile=el('p','sc-zeile'), b=el('button','btn',schein?'Ändern':'Erfassen'); b.type='button'; b.onclick=sheetOeffnen;
     if(!schein){box.classList.remove('rot');zeile.textContent='Kein Schein erfasst';box.append(zeile,b);return}
-    const now=new Date(), bis=tag(schein.bis), ende=new Date(bis); ende.setHours(SCHLUSS_H,0,0,0);
+    const now=new Date(), bis=tag(schein.bis), ende=new Date(bis);
+    if(bis.getDay()===5) ende.setHours(SCHLUSS_H,0,0,0); else ende.setHours(23,59,59,0); // Freitag: bis zur Ziehung
     const heute=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0);
     const tage=Math.round((bis-heute)/86400000), abgelaufen=now>ende;
-    const freitage=abgelaufen?0:Math.floor((ende-now)/(7*86400000))+1;
+    let freitage=0; // Freitagsziehungen ab jetzt bis einschließlich "bis"
+    for(let d=new Date(heute);d<=bis;d.setDate(d.getDate()+1)){if(d.getDay()===5){const z=new Date(d);z.setHours(SCHLUSS_H,0,0,0);if(z>now)freitage++}}
     box.classList.toggle('rot',abgelaufen||tage<=7);
     const kurz=d=>d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
-    const status=abgelaufen?'abgelaufen':tage===0?'letzte heute':`noch ${freitage}`;
-    zeile.append(el('span',null,'Laufzeit '),`${kurz(tag(schein.von))} – ${kurz(bis)}`,el('span',null,' · '),status);
-    zeile.title=`Schein ${tag(schein.von).toLocaleDateString('de-DE')} bis ${bis.toLocaleDateString('de-DE')}, ${abgelaufen?'abgelaufen':freitage+' Freitagsziehung'+(freitage===1?'':'en')}`;
+    const status=abgelaufen?'abgelaufen':tage===0?'endet heute':`noch ${freitage}`;
+    zeile.append(el('span',null,schein.von?'Laufzeit ':'Gültig bis '),schein.von?`${kurz(tag(schein.von))} – ${kurz(bis)}`:kurz(bis),el('span',null,' · '),status);
+    zeile.title=`Schein bis ${bis.toLocaleDateString('de-DE')}, ${abgelaufen?'abgelaufen':freitage+' Freitagsziehung'+(freitage===1?'':'en')}`;
     box.append(zeile,b);
   }
 
@@ -410,13 +412,13 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
   // Fenster "Schein ändern"
   function eingabe(){
     const von=$('scVon').value, bisRoh=$('scBis').value;
-    const bis=isoOk(bisRoh)?aufFreitag(bisRoh):'';
-    return{von,bis,ok:isoOk(von)&&!!bis&&bis>=von};
+    const bis=isoOk(bisRoh)?bisRoh:'';
+    return{von:isoOk(von)&&(!bis||von<=bis)?von:'',bis,ok:!!bis}; // nur "bis" ist Pflicht; "von" nach "bis" wird ignoriert
   }
   function vorschau(){
     const e=eingabe();
-    $('scVorschau').textContent=e.ok?'Gültig bis '+tag(e.bis).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
-      :(isoOk(e.von)&&e.bis&&e.bis<e.von?'„Bis“ liegt vor „von“':'Datum wählen');
+    $('scVorschau').textContent=e.ok?'Gültig bis '+tag(e.bis).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+(isoOk($('scVon').value)&&!e.von?' („von“ liegt danach und wird nicht gespeichert)':'')
+      :'Bis-Datum wählen';
     $('scSpeichern').disabled=!e.ok;
   }
   function sheetOeffnen(){
@@ -430,12 +432,13 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
   $('scWochen').addEventListener('click',e=>{ // +1 … +4 Wochen auf das aktuelle "bis" (leer: nächster Freitag ab "von")
     const b=e.target.closest('button'); if(!b) return;
     const von=$('scVon').value, bis=$('scBis').value;
-    const basis=isoOk(bis)?aufFreitag(bis):(isoOk(von)?aufFreitag(von):aufFreitag(iso(new Date())));
+    const basis=isoOk(bis)?bis:aufFreitag(isoOk(von)?von:iso(new Date()));
     $('scBis').value=plusWochen(basis,Number(b.dataset.w)); vorschau();
   });
   $('scVon').addEventListener('input',vorschau);
   $('scBis').addEventListener('input',vorschau);
-  $('scBis').addEventListener('change',()=>{const v=$('scBis').value;if(isoOk(v))$('scBis').value=aufFreitag(v);vorschau()}); // auf Freitag setzen
+  $('scBis').addEventListener('change',vorschau);
+  $('scVon').addEventListener('change',vorschau);
   $('scAbbruch').onclick=sheetZu;
   $('scSheet').addEventListener('click',e=>{if(e.target===$('scSheet'))sheetZu()});
   $('scSpeichern').onclick=async()=>{
