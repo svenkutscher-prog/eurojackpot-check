@@ -125,19 +125,18 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
 .cd-date{margin:4px 0 0;font-size:15px}
 .cd-pending{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line);font-weight:600}
 
-/* Laufzeit des Spielscheins */
-.schein{margin:0 0 14px;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:var(--slip)}
-.schein p{margin:0}
-.sc-label{font-size:14px;color:var(--muted)}
-.sc-bis{font:700 24px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin-top:2px}
-.sc-rest{font-size:15px;margin-top:2px}
-.sc-info{font-size:13px;color:var(--muted);margin-top:4px}
+/* Laufzeit des Spielscheins – eine Zeile */
+.schein{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 12px 10px 16px;border-radius:14px;border:2px solid var(--line);background:var(--slip)}
+.sc-zeile{flex:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:16px}
+.sc-zeile span{color:var(--muted);font-weight:400}
+.schein .btn{flex:none;padding:6px 14px;font-size:15px}
 .schein.rot{border-color:var(--print);background:var(--print-soft)}
-.schein.rot .sc-bis,.schein.rot .sc-rest{color:var(--print);font-weight:700}
-.schein .btn{margin-top:10px}
-.wochen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.schein.rot .sc-zeile,.schein.rot .sc-zeile span{color:var(--print)}
+.sc-felder{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center}
+.sc-felder label{font-weight:600}
+.wochen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .wochen button{border:1.5px solid var(--print-soft);background:var(--slip);color:var(--print);border-radius:10px;padding:10px 4px;font-weight:600}
-.wochen button[aria-pressed="true"]{background:var(--print);border-color:var(--print);color:var(--paper)}
+.wochen button:active{background:var(--print);color:var(--paper)}
 .sc-vorschau{margin:14px 0 0;font-weight:600}
 .sc-fehler{margin:10px 0 0;color:var(--print);font-size:15px}
 </style>
@@ -163,19 +162,20 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
   <p class="foot">Tipps ändern: Datei tipps.json im GitHub-Repository bearbeiten. Angaben ohne Gewähr – maßgeblich ist die offizielle Gewinnauskunft auf eurojackpot.de. Teilnahme ab 18 Jahren.</p>
 </main>
 
-<!-- Schein verlängern -->
+<!-- Schein ändern -->
 <div class="overlay" id="scSheet" role="dialog" aria-modal="true" aria-labelledby="scTitel">
   <div class="sheet">
-    <h4 id="scTitel">Schein verlängern</h4>
-    <p class="hint">Abgabedatum und Laufzeit wählen. Gültig bis ist immer ein Freitag.</p>
-    <label class="sublabel" for="scDatum">Abgabedatum</label>
-    <input type="date" class="date" id="scDatum">
-    <div class="sublabel">Laufzeit</div>
-    <div class="wochen" id="scWochen">
-      <button type="button" data-w="1">1 Woche</button>
-      <button type="button" data-w="2">2 Wochen</button>
-      <button type="button" data-w="3">3 Wochen</button>
-      <button type="button" data-w="4">4 Wochen</button>
+    <h4 id="scTitel">Schein ändern</h4>
+    <p class="hint">Datum direkt wählen oder um +1 bis +4 Wochen verlängern. „Bis“ ist immer ein Freitag.</p>
+    <div class="sc-felder">
+      <label for="scVon">von</label><input type="date" class="date" id="scVon">
+      <label for="scBis">bis</label><input type="date" class="date" id="scBis">
+    </div>
+    <div class="wochen" id="scWochen" aria-label="Verlängern um">
+      <button type="button" data-w="1">+1</button>
+      <button type="button" data-w="2">+2</button>
+      <button type="button" data-w="3">+3</button>
+      <button type="button" data-w="4">+4</button>
     </div>
     <p class="sc-vorschau" id="scVorschau"></p>
     <p class="sc-fehler" id="scFehler" hidden></p>
@@ -341,40 +341,33 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
   function cdSicher(){try{renderCountdown()}catch(e){$('countdown').hidden=true}}
   setInterval(cdSicher,1000);
 
-  // ---------- Laufzeit des Spielscheins (Eintrag "schein" in tipps.json) ----------
-  // Gültig bis = nächster Freitag ab Abgabedatum (Abgabe am Freitag zählt selbst) + Laufzeit in Wochen
+  // ---------- Laufzeit des Spielscheins: von / bis (bis = immer ein Freitag) ----------
+  const isoOk=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s||''));
+  const tag=s=>new Date(s+'T12:00:00');
+  const isoTag=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  function aufFreitag(s){const d=tag(s);d.setDate(d.getDate()+((5-d.getDay()+7)%7));return isoTag(d)} // Freitag zählt selbst
+  function plusWochen(s,w){const d=tag(s);d.setDate(d.getDate()+w*7);return isoTag(d)}
   function cleanSchein(s){
-    if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(String(s.abgabe||''))) return null;
-    const w=parseInt(s.wochen,10); if(!(w>=1)) return null;
-    return{abgabe:s.abgabe,wochen:w};
-  }
-  function scheinBis(s){
-    const d=new Date(s.abgabe+'T12:00:00');
-    d.setDate(d.getDate()+((5-d.getDay()+7)%7)+s.wochen*7);
-    return d;
+    if(!s) return null;
+    if(isoOk(s.von)&&isoOk(s.bis)) return{von:s.von,bis:aufFreitag(s.bis)};
+    const w=parseInt(s.wochen,10);                      // altes Format: Abgabedatum + Wochen
+    if(isoOk(s.abgabe)&&w>=1) return{von:s.abgabe,bis:plusWochen(aufFreitag(s.abgabe),w)};
+    return null;
   }
   function renderSchein(){
     const box=$('schein'); box.replaceChildren(); box.hidden=false;
-    const knopf=text=>{const b=el('button','btn',text);b.type='button';b.onclick=sheetOeffnen;return b};
-    if(!schein){
-      box.classList.remove('rot');
-      box.append(el('p','sc-label','Spielschein'),el('p','sc-rest','Noch kein Schein erfasst'),knopf('Schein erfassen'));
-      return;
-    }
-    const now=new Date(), bis=scheinBis(schein), ende=new Date(bis); ende.setHours(SCHLUSS_H,0,0,0);
+    const zeile=el('p','sc-zeile'), b=el('button','btn',schein?'Ändern':'Erfassen'); b.type='button'; b.onclick=sheetOeffnen;
+    if(!schein){box.classList.remove('rot');zeile.textContent='Kein Schein erfasst';box.append(zeile,b);return}
+    const now=new Date(), bis=tag(schein.bis), ende=new Date(bis); ende.setHours(SCHLUSS_H,0,0,0);
     const heute=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0);
     const tage=Math.round((bis-heute)/86400000), abgelaufen=now>ende;
     const freitage=abgelaufen?0:Math.floor((ende-now)/(7*86400000))+1;
     box.classList.toggle('rot',abgelaufen||tage<=7);
-    box.append(el('p','sc-label','Schein gültig bis'));
-    box.append(el('p','sc-bis',bis.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'})));
-    box.append(el('p','sc-rest',abgelaufen?'Abgelaufen – bitte verlängern'
-      :tage===0?'Letzte Ziehung heute Abend – bitte verlängern'
-      :freitage===1?'Noch 1 Freitagsziehung – bitte verlängern'
-      :`Noch ${freitage} Freitagsziehungen`));
-    const ab=new Date(schein.abgabe+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
-    box.append(el('p','sc-info',`Abgegeben ${ab} · Laufzeit ${schein.wochen} ${schein.wochen===1?'Woche':'Wochen'}`));
-    box.append(knopf('Verlängern'));
+    const kurz=d=>d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+    const status=abgelaufen?'abgelaufen':tage===0?'letzte heute':`noch ${freitage}`;
+    zeile.append(el('span',null,'Laufzeit '),`${kurz(tag(schein.von))} – ${kurz(bis)}`,el('span',null,' · '),status);
+    zeile.title=`Schein ${tag(schein.von).toLocaleDateString('de-DE')} bis ${bis.toLocaleDateString('de-DE')}, ${abgelaufen?'abgelaufen':freitage+' Freitagsziehung'+(freitage===1?'':'en')}`;
+    box.append(zeile,b);
   }
 
   // Freigabe-Code: von myplan auf diesem Gerät gespeichert, sonst aus dem myplan-Link der Startseite
@@ -414,29 +407,41 @@ h3{font:700 22px/1.1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:3
     schein=s; lokalMerken();
   }
 
-  // Fenster "Schein verlängern"
-  let wahlWochen=null;
+  // Fenster "Schein ändern"
+  function eingabe(){
+    const von=$('scVon').value, bisRoh=$('scBis').value;
+    const bis=isoOk(bisRoh)?aufFreitag(bisRoh):'';
+    return{von,bis,ok:isoOk(von)&&!!bis&&bis>=von};
+  }
   function vorschau(){
-    const d=$('scDatum').value, ok=/^\d{4}-\d{2}-\d{2}$/.test(d)&&wahlWochen;
-    $('scWochen').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.w)===wahlWochen)));
-    $('scVorschau').textContent=ok?'Gültig bis '+scheinBis({abgabe:d,wochen:wahlWochen}).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'Laufzeit wählen';
-    $('scSpeichern').disabled=!ok;
+    const e=eingabe();
+    $('scVorschau').textContent=e.ok?'Gültig bis '+tag(e.bis).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+      :(isoOk(e.von)&&e.bis&&e.bis<e.von?'„Bis“ liegt vor „von“':'Datum wählen');
+    $('scSpeichern').disabled=!e.ok;
   }
   function sheetOeffnen(){
-    $('scDatum').value=iso(new Date()); wahlWochen=null; $('scFehler').hidden=true;
-    $('scTitel').textContent=schein?'Schein verlängern':'Schein erfassen';
+    $('scVon').value=schein?schein.von:iso(new Date());
+    $('scBis').value=schein?schein.bis:'';
+    $('scFehler').hidden=true; $('scTitel').textContent=schein?'Schein ändern':'Schein erfassen';
     vorschau(); $('scSheet').classList.add('open'); document.addEventListener('keydown',sheetTaste);
   }
   function sheetZu(){$('scSheet').classList.remove('open');document.removeEventListener('keydown',sheetTaste)}
   function sheetTaste(e){if(e.key==='Escape')sheetZu()}
-  $('scWochen').addEventListener('click',e=>{const b=e.target.closest('button');if(b){wahlWochen=Number(b.dataset.w);vorschau()}});
-  $('scDatum').addEventListener('input',vorschau);
+  $('scWochen').addEventListener('click',e=>{ // +1 … +4 Wochen auf das aktuelle "bis" (leer: nächster Freitag ab "von")
+    const b=e.target.closest('button'); if(!b) return;
+    const von=$('scVon').value, bis=$('scBis').value;
+    const basis=isoOk(bis)?aufFreitag(bis):(isoOk(von)?aufFreitag(von):aufFreitag(iso(new Date())));
+    $('scBis').value=plusWochen(basis,Number(b.dataset.w)); vorschau();
+  });
+  $('scVon').addEventListener('input',vorschau);
+  $('scBis').addEventListener('input',vorschau);
+  $('scBis').addEventListener('change',()=>{const v=$('scBis').value;if(isoOk(v))$('scBis').value=aufFreitag(v);vorschau()}); // auf Freitag setzen
   $('scAbbruch').onclick=sheetZu;
   $('scSheet').addEventListener('click',e=>{if(e.target===$('scSheet'))sheetZu()});
   $('scSpeichern').onclick=async()=>{
-    const s={abgabe:$('scDatum').value,wochen:wahlWochen}, b=$('scSpeichern');
-    b.disabled=true; b.textContent='Speichert …'; $('scFehler').hidden=true;
-    try{await scheinSpeichern(s);sheetZu();renderSchein();toast('Gespeichert')}
+    const e=eingabe(); if(!e.ok) return;
+    const b=$('scSpeichern'); b.disabled=true; b.textContent='Speichert …'; $('scFehler').hidden=true;
+    try{await scheinSpeichern({von:e.von,bis:e.bis});sheetZu();renderSchein();toast('Gespeichert')}
     catch(err){$('scFehler').textContent=err.message||'Speichern fehlgeschlagen';$('scFehler').hidden=false}
     finally{b.textContent='Speichern';vorschau()}
   };
